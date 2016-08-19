@@ -132,16 +132,6 @@
         }
     };
 
-    randomock.text.padLeft = function (result, min, c) {
-        return function () {
-            var t = this.val(result);
-            if (t.length < min) {
-                return randomock.text(randomock.times(t.length - min, c), t);
-            }
-            return t;
-        }
-    };
-
 
     randomock.sample = function (list) {
         return function () {
@@ -181,29 +171,13 @@
             var v = parseInt(c[2]);
             v = c[1] === '-' ? v * -1 : v;
             switch (c[3]) {
-                case 'y':
-                    y = y + v;
-                    break;
-                case 'm':
-                case 'mo':
-                    m = m + v;
-                    break;
-                case 'd':
-                    d = d + v;
-                    break;
-                case 'h':
-                    h = h + v;
-                    break;
-                case 'mi':
-                case 'M':
-                    mi = mi + v;
-                    break;
-                case 's':
-                    s = s + v;
-                    break;
-                case 'ms':
-                    ms = ms + v;
-                    break;
+                case 'y': y = y + v; break;
+                case 'm': case 'mo': m = m + v; break;
+                case 'd': d = d + v; break;
+                case 'h': h = h + v; break;
+                case 'mi': case 'M': mi = mi + v; break;
+                case 's': s = s + v; break;
+                case 'ms': ms = ms + v; break;
             }
         }
         return new Date(date.getFullYear() + y, date.getMonth() + m, date.getDate() + d, date.getHours() + h, date.getMinutes() + mi, date.getSeconds() + s, date.getMilliseconds() + ms);
@@ -224,7 +198,67 @@
         }
     };
 
-    randomock.date.format = function (date, format) {
+    randomock.value = function(func){
+        return function(){
+            return typeof func === 'function' ? func.apply(this) : null;
+        }
+    };
+
+    randomock._wrap = function(func){
+        return function(){
+            var args = arguments;
+            var resultFunc = func.apply(this,args);
+            var wrapper = function(){
+                var result = this.val(resultFunc);
+                for(var i = 0; i < wrapper._extends.length;i++){
+                    var e = wrapper._extends[i];
+                    var args = Array.prototype.slice.call(e.args);
+                    args.unshift(result);
+                    result = randomock._extends[e.name].apply(this,args);
+                }
+                return this.val(result);
+            };
+            wrapper._extends = [];
+            for(var n in randomock._extends){
+                wrapper[n] = (function(n){
+                    return function(){
+                        wrapper._extends.push({
+                            name : n,
+                            args : arguments
+                        });
+                        return wrapper;
+                    }
+                })(n);
+            }
+            return wrapper;
+        };
+    };
+
+    randomock.text = randomock._wrap(randomock.text);
+
+
+    randomock.extend = function(name,func){
+        randomock._extends[name] = func;
+    };
+    randomock._extends = {};
+
+
+
+    randomock.extend('padLeft',function (result, min, c) {
+        if(c === undefined){
+            c = ' ';
+        }
+        return function () {
+            var t = this.val(result);
+            min = this.val(min);
+            if (t.length < min) {
+                return this.val(randomock.join(this.val(randomock.times(min - t.length, c)).join(''), t));
+            }
+            return t;
+        }
+    });
+
+    randomock.extend('dateFormat',function (date, format) {
         if (format === undefined) {
             format = date;
             date = Date.now();
@@ -250,7 +284,9 @@
                 }
             });
         }
-    }
+    });
+
+
     if (module) {
         module.exports = randomock;
     }
