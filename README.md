@@ -16,14 +16,18 @@ var $rm = require('./randomock');
 var result = $rm({
     "result" : {
         "count" : $rm.range(100,120),
-        "list" : $rm.repeat($rm.range(10,15),{
+        "list" : $rm.repeat($rm.integer(10,15),{
             "id" : $rm.increase(),
-            "text" : $rm.join('Prefix ',$rm.text('ABC123',$rm.range(3,5))),
-            "option" : $rm.choose('支付宝','微信','银联'),
-            "date" : $rm.date('2016-1-1','-30d'),
-            "permissions" : $rm.repeat($rm.range(3),{
+            "index" : $rm.index(),
+            "text" : $rm.join('Prefix ',$rm.text('ABC123',$rm.integer(3,5)),' Subfix').padLeft(30,$rm.choose('!','$','&',' ')),
+            "date" : $rm.date('2016-11-13','-30d').dateOffset('+2y'),
+            "dateFormat" : $rm.date('2016-11-13','-1y').dateFormat('y/m/d h:M:s.f'),
+            "sublist" : $rm.repeat($rm.range(0,3),{
                 "index" : $rm.index(),
-                "value" : $rm.choose(1,2,4)
+                "value" : $rm.choose('123','456','789')
+            }),
+            "value" : $rm.value(function(){
+                return "generate on processing" + (typeof $rm) + Math.random() + this.val(this.index());
             })
         })
     }
@@ -163,11 +167,11 @@ $rm.repeat(2,{
 ```
 
 
-### date([start = Date.now()], range)
+### date([start = Date.now()], offset)
 
 从一个日期范围生成随机日期，返回Date对象。start默认是现在，start可以指定Date对象、可以parse的字符串或毫秒数字。
 
-range是描述距离start的偏移量的字符串，使用+-配合数字及指定位，可以使用空格指定多个偏移位。
+offset是描述距离start的偏移量的字符串，使用+-配合数字及指定位，可以使用空格指定多个偏移位。
 
 ```javascript
 "date" : $rm.date('2016-1-1','+2y -30d')
@@ -196,9 +200,48 @@ range是描述距离start的偏移量的字符串，使用+-配合数字及指�
 
 
 
-## 通道方法
+## 扩展方法
 
-通道方法用来在生成方法之后添加更多的处理。
+扩展方法用来在生成方法之后添加更多的处理，直接在生成方法之后调用并传入参数即可。
+
+```javascript
+{ text : $rm.date('+1y').dateOffset('-2y').dateFormat('y-m-d').val() }
+```
+
+### .val()
+
+立即执行生成方法并获取值，对于某些需要延迟执行才能获取正确结果的生成方法（如：`index()`）可能会出现不符合预期的结果。
+
+### .toFixed([digits])
+
+同原生toFixed。
+
+### .padLeft(min,[c=' '])
+
+使用`c`给出的字符填充至`min`给出的位数。
+
+### .dateOffset(offset)
+
+为日期应用偏移，语法同`date()`生成方法。
+
+### .dateFormat([format='y-m-d h:M:s.f'])
+
+格式化日期，字符串中年、月、日、时、分、秒、毫秒对应的替换字符是y、m、d、h、M、s、f。
+
+### randomock.extend(name,extendFunc)
+
+可以通过调用randomock.extend添加自定义扩展方法：
+
+```javascript
+randomock.extend('wrap',function(result,prefix,subfix){
+	return prefix + this.val(result) + subfix;
+});
+
+{ text : $rm.range(1000,10000).wrap('Currency: ','$')}
+// { text : 'Currency: 413$'}
+```
+
+扩展方法中第一个参数result是上一个扩展方法或生成方法的执行结果，需要调用`this.val()`来确保正确的执行结果。
 
 ## ramdomock状态对象
 
