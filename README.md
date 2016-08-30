@@ -101,6 +101,20 @@ $rm.repeat(2,{
 // }]
 ```
 
+
+
+### current(name)
+
+获取当前正在生成的对象的属性值。
+
+### parent(name)
+
+### data(name,[value])
+
+### property(obj,name)
+
+获取某个对象的属性
+
 ### float([min = 0], max)
 
 生成在范围内的浮点数，min默认0。
@@ -263,7 +277,9 @@ randomock.extend('wrap',function(result,prefix,subfix){
 
 如果参数是一个子randomock配置，可以调用此方法执行生成对象。
 
+### item()
 
+获取正在生成中的随机对象。
 
 ## 扩展生成方法和通道方法
 

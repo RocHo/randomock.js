@@ -1,4 +1,4 @@
-(function (exports) {
+(function () {
     function _getType(o){
         return Object.prototype.toString.call(o).slice(8,-1).toLowerCase();
     }
@@ -7,7 +7,7 @@
     var randomock = function (config,status) {
         if(status === undefined){
             status = {
-                contextStack : [],
+                _contextStack : [],
                 val : function (v) {
                     if (typeof v === 'function') {
                         return v.apply(this);
@@ -18,22 +18,57 @@
                     return Math.random();
                 },
                 index : function(){
-                    return this.contextStack[this.contextStack.length - 1];
+                    return this._currentContext().index;
                 },
-                pushStack : function(){
-                    this.contextStack.push(0);
+                _currentContext :function(){
+                    return this._contextStack[this._contextStack.length - 1];
                 },
-                popStack : function(){
-                    this.contextStack.pop();
+                _pushStack : function(){
+                    this._contextStack.push({
+                        index : 0,
+                        datas : {}
+                    });
                 },
-                increaseIndex : function(){
-                    this.contextStack[this.contextStack.length - 1] = this.index() +1;
+                _popStack : function(){
+                    this._contextStack.pop();
+                },
+                _increaseIndex : function(){
+                    this._currentContext().index = this.index() +1;
                 },
                 randomock : function(obj){
                     return randomock(obj,this);
+                },
+                _setItem : function(obj){
+                    var ctx = this._currentContext();
+                    ctx.item = obj;
+                },
+                item : function(){
+                    return this._currentContext().item;
+                },
+                parentItem : function(index){
+                    index = index || 0;
+                    if(!this._contextStack.length){
+                        return null;
+                    }
+                    return this._contextStack[Math.max(0,this._contextStack.length - 2 - index)].item;
+                },
+                data : function(name,value){
+                    if(value === undefined){
+                        //get
+                        for (var i = this._contextStack.length - 1; i >= 0; i--) {
+                            var ctx = this._contextStack[i];
+                            if(ctx.datas.hasOwnProperty(name)){
+                                return ctx.datas[name];
+                            }
+                        }
+                        return null;
+                    }else{
+                        //set
+                        this._currentContext().datas[name] = value;
+                    }
                 }
             };
-            status.pushStack();
+            status._pushStack();
         }
 
 
@@ -42,11 +77,21 @@
 
         if (_getType(config) === 'object') {
             var mock = {};
+            var ps = [];
+            status._setItem(mock);
+
             for (var n in config) {
                 if(config.hasOwnProperty(n)){
-                    var v = status.val(config[n]);
-                    mock[n] = randomock(v,status);
+                    ps.push({
+                        key : n,
+                        func : config[n]
+                    });
                 }
+            }
+
+            ps.sort(function(a,b){return a.func._order - b.func._order;});
+            for(var i= 0,l = ps.length;i<l;i++){
+                mock[ps[i].key] = randomock(status.val(ps[i].func),status);
             }
             return mock;
         }
@@ -59,6 +104,15 @@
     randomock._wrap = function(func){
         return function(){
             var args = arguments;
+
+            var order = 0;
+            for (var i = 0; i < args.length; i++) {
+                var obj = args[i];
+                if(_getType(obj) === 'function'){
+                    order = Math.max(obj._order || 0,order);
+                }
+            }
+
             var resultFunc = func.apply(this,args);
             var wrapper = function(){
                 var result = this.val(resultFunc);
@@ -70,6 +124,7 @@
                 }
                 return this.val(result);
             };
+            wrapper._order = Math.max(resultFunc._order || 0,order);
             wrapper._extends = [];
             for(var n in randomock._extends){
                 wrapper[n] = (function(n){
@@ -93,21 +148,20 @@
     };
     randomock._extends = {};
 
-
-
-
     randomock.times = randomock.repeat = randomock._wrap(function (times, value) {
-        return function () {
+        var f = function () {
             var count = this.val(times);
             var r = [];
-            this.pushStack();
+            this._pushStack();
             for (var i = 0; i < count; i++) {
                 r.push(this.randomock(value));
-                this.increaseIndex();
+                this._increaseIndex();
             }
-            this.popStack();
+            this._popStack();
             return r;
-        }
+        };
+        f._order = 500;
+        return f
     });
 
     randomock.index = randomock._wrap(function(){
@@ -115,6 +169,36 @@
             return this.index();
         }
     });
+
+    randomock.current = randomock._wrap(function(name){
+        var func = function(){
+            var i = this.item();
+            return i ? i[name] : null;
+        };
+        func._order = 1000;
+        return func;
+    });
+
+    randomock.parent = randomock._wrap(function(name){
+        return function(){
+            var i = this.parentItem();
+            return i ? i[name] : null;
+        };
+    });
+
+    randomock.data = randomock._wrap(function(name,value){
+        return function(){
+            if(value === undefined){
+                // get
+                return this.data(this.val(name));
+            }else{
+                var v = this.val(value);
+                this.data(this.val(name),v);
+                return v;
+            }
+        }
+    });
+
 
     randomock.float = randomock._wrap(function (min, max) {
         if (max === undefined) {
@@ -159,8 +243,6 @@
         }
     });
 
-
-
     randomock.text = randomock._wrap(function (source, length) {
         if (length === undefined) {
             length = source;
@@ -184,6 +266,13 @@
         var args = arguments;
         return function () {
             return this.val(args[this.val(randomock.integer(args.length))]);
+        }
+    });
+
+    randomock.property = randomock._wrap(function(obj,name){
+        return function(){
+            var o = this.val(obj);
+            return o ? o[this.val(name)] : o;
         }
     });
 
