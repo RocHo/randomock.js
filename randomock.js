@@ -3,6 +3,10 @@
         return Object.prototype.toString.call(o).slice(8,-1).toLowerCase();
     }
 
+    function _identity(o){
+        return o;
+    }
+
 
     var randomock = function (config,status) {
         if(status === undefined){
@@ -65,6 +69,7 @@
                     }else{
                         //set
                         this._currentContext().datas[name] = value;
+                        return value;
                     }
                 }
             };
@@ -120,6 +125,9 @@
                     var e = wrapper._extends[i];
                     var args = Array.prototype.slice.call(e.args);
                     args.unshift(result);
+                    for (var j = 0; j < args.length; j++) {
+                        args[j] = this.val(args[j]);
+                    }
                     result = randomock._extends[e.name].apply(this,args);
                 }
                 return this.val(result);
@@ -129,6 +137,10 @@
             for(var n in randomock._extends){
                 wrapper[n] = (function(n){
                     return function(){
+                        var process = randomock._extendsProcesses[n];
+                        if(_getType(process) === 'function'){
+                           process.apply(wrapper,arguments);
+                        }
                         wrapper._extends.push({
                             name : n,
                             args : arguments
@@ -143,10 +155,12 @@
 
 
 
-    randomock.extend = function(name,func){
+    randomock.extend = function(name,func,processFunc){
         randomock._extends[name] = func;
+        randomock._extendsProcesses[name] = processFunc;
     };
     randomock._extends = {};
+    randomock._extendsProcesses = {};
 
     randomock.times = randomock.repeat = randomock._wrap(function (times, value) {
         var f = function () {
@@ -254,18 +268,13 @@
         }
     });
 
-
-    randomock.sample = randomock._wrap(function (list) {
+    randomock.choose = randomock.sample = randomock._wrap(function (list) {
+        if(arguments.length > 1){
+            list = Array.prototype.slice.apply(arguments);
+        }
         return function () {
             var l = this.val(list);
             return this.val(l[this.val(randomock.integer(l.length))]);
-        }
-    });
-
-    randomock.choose = randomock._wrap(function () {
-        var args = arguments;
-        return function () {
-            return this.val(args[this.val(randomock.integer(args.length))]);
         }
     });
 
@@ -293,7 +302,7 @@
 
     var dc = /([+-]?)(\d+)(y|mo|m|d|h|mi|M|s|ms)(\s|$)/g;
 
-    function applyDateOffset(date, change) {
+    function _applyDateOffset(date, change) {
         dc.lastIndex = 0;
         var y, m, d, h, mi, s, ms;
         y = m = d = h = mi = s = ms = 0;
@@ -322,7 +331,7 @@
         }
         return function () {
             start = normalizeDate(this.val(start));
-            var end = applyDateOffset(normalizeDate(start),this.val(offset));
+            var end = _applyDateOffset(normalizeDate(start),this.val(offset));
             start = start.getTime();
             end = end.getTime();
 
@@ -330,74 +339,99 @@
         }
     });
 
+    randomock.generator = function(generator){
+        if(_getType(generator) === 'function'){
+            return randomock._wrap(generator);
+        }
+        else{
+            return generator;
+        }
+    };
+
     randomock.value = randomock._wrap(function(func){
         return function(){
             return typeof func === 'function' ? func.apply(this) : this.val(func);
         }
     });
 
+    randomock.v = randomock._wrap(function(v){
+        return function(){
+            return this.val(v);
+        }
+    });
 
-    randomock.extend('val',function(result){
-       return function(){
-           return this.val(result);
-       }
+
+    function _pad(t,min,c,r){
+        t = ''+t;
+        if (t.length < min) {
+            var p = new Array(min-t.length+1).join(c);
+            return  r ? t + p: p + t;
+        }
+        return t;
+    }
+
+    randomock.extend('val',_identity);
+
+    randomock.extend('data',function(result,name){
+            this.data(name,result);
+            return result;
+    });
+
+    randomock.extend('order',_identity,function(order){
+        this._order = order;
     });
 
     randomock.extend('toFixed',function(result, digits){
-        return function(){
-            var r = parseFloat(this.val(result));
+            var r = parseFloat(result);
             return r.toFixed(this.val(digits));
-        }
+    });
+
+    randomock.extend('append',function (result, append) {
+        return result + append;
     });
 
     randomock.extend('padLeft',function (result, min, c) {
-        if(c === undefined){
-            c = ' ';
-        }
-        return function () {
-            var t = this.val(result);
-            min = this.val(min);
-            if (t.length < min) {
-                return new Array(min-t.length+1).join(this.val(c)) + t;
-                //return this.val(randomock.join(this.val(randomock.times(min - t.length, c)).join(''), t));
-            }
-            return t;
-        }
+        return _pad(result,min,c,false);
     });
 
     randomock.extend('dateOffset',function(result,offset){
-        return function(){
-            return applyDateOffset(this.val(result),offset);
-        }
+        return _applyDateOffset(result,offset);
     });
 
     randomock.extend('dateFormat',function (date, format) {
         if (format === undefined) {
             format === 'y-m-d h:M:s.f';
         }
-        return function () {
-            date = normalizeDate(this.val(date));
-            format = this.val(format);
-            return format.replace(/y+|m+|d+|h+|M+|s+|f+/g, function (m) {
-                switch (m[0]) {
-                    case 'y':
-                        return date.getFullYear();
-                    case 'm':
-                        return date.getMonth() + 1;
-                    case 'd':
-                        return date.getDate();
-                    case 'h':
-                        return date.getHours();
-                    case 'M':
-                        return date.getMinutes();
-                    case 's':
-                        return date.getSeconds();
-                    case 'f':
-                        return date.getMilliseconds();
-                }
-            });
-        }
+
+        date = normalizeDate(date);
+        return format.replace(/y+|m+|d+|h+|M+|s+|f+/g, function (m) {
+            var r = "";
+            switch (m[0]) {
+                case 'y':
+                    r =  date.getFullYear();
+                    break;
+                case 'm':
+                    r =  date.getMonth() + 1;
+                    break;
+                case 'd':
+                    r =  date.getDate();
+                    break;
+                case 'h':
+                    r =  date.getHours();
+                    break;
+                case 'M':
+                    r =  date.getMinutes();
+                    break;
+                case 's':
+                    r =  date.getSeconds();
+                    break;
+                case 'f':
+                    return _pad(date.getMilliseconds(),m.length,'0').substr(0,m.length);
+            }
+            return _pad(r,m.length,'0');
+        });
     });
+
 
 
     if (module) {

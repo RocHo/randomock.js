@@ -9,14 +9,16 @@ var increase = $rm.increase();
 
 var result = $rm({
     "result" : {
-        "count" : $rm.data('total',$rm.range(100,120)),
+        "count" : $rm.range(100,120).data('total'),
         "list" : $rm.repeat($rm.integer(10,15),{
             "id" : increase,
             "index" : $rm.index(),
             "text" : $rm.join('Prefix ',$rm.text('ABC123',$rm.integer(3,5)),' Subfix').padLeft(30,$rm.choose('!','$','&',' ')),
             "date" : $rm.date('2016-11-13','-30d').dateOffset('+2y'),
-            "dateFormat" : $rm.date('2016-11-13','-1y').dateFormat('y/m/d h:M:s.f'),
-            "option" : $rm.choose('Option1','Option2','Option3'),
+            "dateFormat" : $rm.date('2016-11-13','-1y').data('dateH').dateFormat('yyyy/mm/dd hh:MM:ss.ff'),
+            "dateH" : $rm.data('dateH').order(1),
+            "option" : $rm.choose(['Option1','Option2','Option3']).append(' in Selection'),
+            "laterOrder" : $rm.join('Value After SubOption : ',$rm.current('subOption').order(1500)),
             "subOption" : $rm.property(options,$rm.current('option')),
             "sublist" : $rm.repeat($rm.range(0,3),{
                 "id" : increase,
