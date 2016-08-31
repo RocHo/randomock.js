@@ -19,13 +19,14 @@ var result = $rm({
             "dateH" : $rm.data('dateH').order(1),
             "option" : $rm.choose(['Option1','Option2','Option3']).append(' in Selection'),
             "laterOrder" : $rm.join('Value After SubOption : ',$rm.current('subOption').order(1500)),
-            "subOption" : $rm.property(options,$rm.current('option')),
-            "sublist" : $rm.repeat($rm.range(0,3),{
+            "subOption" : $rm.prop(options,$rm.current('option')),
+            "sublist" : $rm.repeat($rm.range(10,15),{
                 "id" : increase,
                 "index" : $rm.index(),
                 "value" : $rm.choose('123','456','789'),
                 "parentIndex" : $rm.parent('index'),
                 "resultCount" : $rm.data('total'),
+                "weight": $rm.weightedChoose(4,'4',1,'1',3,'3',2,'2')
             }),
             "value" : $rm.value(function(){
                 return "generate on processing" + (typeof $rm) + Math.random() + this.val(this.index());

@@ -278,7 +278,40 @@
         }
     });
 
-    randomock.property = randomock._wrap(function(obj,name){
+    randomock.weightedChoose = randomock._wrap(function(){
+        var args = Array.prototype.slice.apply(arguments);
+        return function(){
+            var wa = [];
+            for (var i = 0; i < args.length; i=i+2) {
+                wa.push({
+                    w : this.val(args[i]),
+                    v : args[i+1]
+                });
+            }
+            wa.sort(function(a,b){ return a.w-b.w;});
+            var b = 0;
+            for (var i = 0; i < wa.length; i++) {
+                var v = wa[i];
+                b +=v.w;
+                v.w = b;
+            }
+            b = this.rnd() *  wa[wa.length-1].w;
+            for (var i = 0; i < wa.length; i++) {
+                var v = wa[i];
+                if(v.w > b){
+                    return this.val(v.v);
+                }
+            }
+        };
+    });
+
+    randomock.when = randomock._wrap(function(cond,t,f){
+        return function () {
+            return this.val(this.val(cond) ? t : f);
+        }
+    });
+
+    randomock.prop = randomock._wrap(function(obj,name){
         return function(){
             var o = this.val(obj);
             return o ? o[this.val(name)] : o;
@@ -388,6 +421,10 @@
 
     randomock.extend('append',function (result, append) {
         return result + append;
+    });
+
+    randomock.extend('appendText',function(result,text,length){
+        return this.val(randomock.text(text,length));
     });
 
     randomock.extend('padLeft',function (result, min, c) {
