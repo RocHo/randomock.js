@@ -311,10 +311,17 @@
         }
     });
 
-    randomock.prop = randomock._wrap(function(obj,name){
+    randomock.prop = randomock._wrap(function(obj,name,def){
         return function(){
             var o = this.val(obj);
-            return o ? o[this.val(name)] : o;
+            if(o){
+                var n = this.val(name);
+                var r = o[n];
+                if(r !== undefined){
+                    return r;
+                }
+            }
+            return def;
         }
     });
 
@@ -372,22 +379,16 @@
         }
     });
 
-    randomock.generator = function(generator){
-        if(_getType(generator) === 'function'){
-            return randomock._wrap(generator);
-        }
-        else{
-            return generator;
-        }
-    };
+    // randomock.generator = function(generator){
+    //     if(_getType(generator) === 'function'){
+    //         return randomock._wrap(generator);
+    //     }
+    //     else{
+    //         return generator;
+    //     }
+    // };
 
-    randomock.value = randomock._wrap(function(func){
-        return function(){
-            return typeof func === 'function' ? func.apply(this) : this.val(func);
-        }
-    });
-
-    randomock.v = randomock._wrap(function(v){
+    randomock.v = randommock.value = randomock._wrap(function(v){
         return function(){
             return this.val(v);
         }
@@ -403,7 +404,9 @@
         return t;
     }
 
-    randomock.extend('val',_identity);
+    randomock.extend('val',function(result){
+        return this.val(result);
+    });
 
     randomock.extend('data',function(result,name){
             this.data(name,result);
@@ -420,12 +423,12 @@
     });
 
     randomock.extend('append',function (result, append) {
-        return result + append;
+        return result + this.val(append);
     });
 
-    randomock.extend('appendText',function(result,text,length){
-        return this.val(randomock.text(text,length));
-    });
+    // randomock.extend('appendText',function(result,text,length){
+    //     return this.val(randomock.text(text,length));
+    // });
 
     randomock.extend('padLeft',function (result, min, c) {
         return _pad(result,min,c,false);
