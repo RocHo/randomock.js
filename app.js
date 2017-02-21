@@ -12,7 +12,7 @@ var result = $rm({
         "count" : $rm.range(100,120).data('total'),
         "list" : $rm.repeat($rm.integer(10,15),{
             "id" : increase,
-            "index" : $rm.index(),
+            "index" : $rm.index(3),
             "text" : $rm.join('Prefix ',$rm.text('ABC123',$rm.integer(3,5)),' Subfix').padLeft(30,$rm.choose('!','$','&',' ')),
             "date" : $rm.date('2016-11-13','-30d').dateOffset('+2y'),
             "dateFormat" : $rm.date('2016-11-13','-1y').data('dateH').dateFormat('yyyy/mm/dd hh:MM:ss.ff'),
@@ -22,7 +22,7 @@ var result = $rm({
             "subOption" : $rm.prop(options,$rm.current('option')),
             "sublist" : $rm.repeat($rm.range(10,15),{
                 "id" : increase,
-                "index" : $rm.index(),
+                "index" : $rm.index(1,100),
                 "value" : $rm.choose('123','456','789'),
                 "parentIndex" : $rm.parent('index'),
                 "resultCount" : $rm.data('total'),

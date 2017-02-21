@@ -178,9 +178,12 @@
         return f
     });
 
-    randomock.index = randomock._wrap(function(){
+    randomock.index = randomock._wrap(function(base,multiply){
         return function(){
-            return this.index();
+            var b = this.val(base);
+            var m = this.val(multiply) || 10;
+
+            return this.index() + (b ? b * m : 0);
         }
     });
 
@@ -388,7 +391,7 @@
     //     }
     // };
 
-    randomock.v = randommock.value = randomock._wrap(function(v){
+    randomock.v = randomock.value = randomock._wrap(function(v){
         return function(){
             return this.val(v);
         }
