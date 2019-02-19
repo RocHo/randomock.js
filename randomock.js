@@ -8,12 +8,12 @@
     }
 
 
-    var randomock = function (config,status) {
+	const randomock = function (config,status) {
         if(status === undefined){
             status = {
                 _contextStack : [],
                 val : function (v) {
-                    if (typeof v === 'function') {
+					if (typeof v === 'function' && v._$rm) {
                         return v.apply(this);
                     }
                     return v;
@@ -42,6 +42,7 @@
                 randomock : function(obj){
                     return randomock(obj,this);
                 },
+				$rm : randomock,
                 _setItem : function(obj){
                     var ctx = this._currentContext();
                     ctx.item = obj;
@@ -106,6 +107,8 @@
 
     };
 
+	const $rm = randomock;
+	
     randomock._wrap = function(func){
         return function(){
             var args = arguments;
@@ -119,6 +122,7 @@
             }
 
             var resultFunc = func.apply(this,args);
+			resultFunc._$rm = randomock;
             var wrapper = function(){
                 var result = this.val(resultFunc);
                 for(var i = 0; i < wrapper._extends.length;i++){
@@ -132,6 +136,7 @@
                 }
                 return this.val(result);
             };
+			wrapper._$rm = randomock;
             wrapper._order = Math.max(resultFunc._order || 0,order);
             wrapper._extends = [];
             for(var n in randomock._extends){
@@ -281,6 +286,12 @@
         }
     });
 
+	randomock.chooseSome = randomock._wrap(function(count,list){
+		return function(){
+			return this.val($rm.repeat(count,$rm.choose(list)));
+		}
+	});
+	
     randomock.weightedChoose = randomock._wrap(function(){
         var args = Array.prototype.slice.apply(arguments);
         return function(){
@@ -429,9 +440,9 @@
         return result + this.val(append);
     });
 
-    // randomock.extend('appendText',function(result,text,length){
-    //     return this.val(randomock.text(text,length));
-    // });
+	randomock.extend('map',function(result,func){
+	    return func ? func.call(this,result) : result;
+	});
 
     randomock.extend('padLeft',function (result, min, c) {
         return _pad(result,min,c,false);
