@@ -298,8 +298,8 @@
             var wa = [];
             for (var i = 0; i < args.length; i=i+2) {
                 wa.push({
-                    w : this.val(args[i]),
-                    v : args[i+1]
+					w : args[i+1],
+					v : this.val(args[i])
                 });
             }
             wa.sort(function(a,b){ return a.w-b.w;});
